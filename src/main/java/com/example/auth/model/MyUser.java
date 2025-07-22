@@ -16,5 +16,6 @@ public class MyUser {
     private String email;
     private String password;
     private String roles;
+    //заменить на Enum
     private String refreshToken;
 }
