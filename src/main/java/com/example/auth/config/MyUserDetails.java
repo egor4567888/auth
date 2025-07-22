@@ -7,12 +7,12 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.stream.Collectors;
 
 public class MyUserDetails implements UserDetails {
     public MyUser user;
-    public MyUserDetails(MyUser user){
+
+    public MyUserDetails(MyUser user) {
         this.user = user;
     }
 
