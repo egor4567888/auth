@@ -1,7 +1,10 @@
 package com.example.auth.config;
 
+import com.example.auth.service.MyUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -20,23 +23,26 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity
 public class SecurityConfig {
     @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder encoder){
-        UserDetails admin = User.builder().username("admin").password(encoder.encode("admin")).roles("ADMIN").build();
-        UserDetails prem = User.builder().username("prem").password(encoder.encode("prem")).roles("PREMIUM_USER").build();
-        UserDetails guest = User.builder().username("guest").password(encoder.encode("guest")).roles("GUEST").build();
-
-        return new InMemoryUserDetailsManager(admin,prem,guest);
+    public UserDetailsService userDetailsService() {
+        return new MyUserDetailsService();
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http.csrf(AbstractHttpConfigurer::disable).authorizeHttpRequests(auth -> auth.requestMatchers("/welcome").permitAll()
-                .requestMatchers("api/**").authenticated())
+        return http.csrf(AbstractHttpConfigurer::disable).authorizeHttpRequests(auth -> auth.requestMatchers("/welcome", "/new-user").permitAll()
+                        .requestMatchers("api/**").authenticated())
                 .formLogin(AbstractAuthenticationFilterConfigurer::permitAll).build();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder(){
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService());
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 }
