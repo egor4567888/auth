@@ -23,21 +23,40 @@ public class AuthService {
 
     public void addUser(MyUser user) {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setRefreshToken("");
         repository.save(user);
     }
 
     public JwtAuthDto signIn(UserCredentialsDto userCredentialsDto) throws AuthenticationException {
         MyUser user = findByCredentials(userCredentialsDto);
-        return jwtService.generateAuthToken(user.getName());
+
+        JwtAuthDto jwtAuthDto = jwtService.generateAuthToken(user.getName());
+        
+        user.setRefreshToken(jwtAuthDto.getRefreshToken());
+        repository.save(user);
+
+        return jwtAuthDto;
     }
 
     public JwtAuthDto refreshToken(RefreshTokenDto refreshTokenDto) throws AuthenticationException {
-        String refreshToken = refreshTokenDto.getRefreshToken();
-        if (refreshToken != null && jwtService.validateJwtToken(refreshToken)) {
-            MyUser user = findByUsername(jwtService.getUsernameFromToken(refreshToken));
-            return jwtService.refreshAccessToken(user.getName(), refreshToken);
+        String oldRefreshToken = refreshTokenDto.getRefreshToken();
+
+        if (oldRefreshToken == null || !jwtService.validateJwtToken(oldRefreshToken)) {
+            throw new AuthenticationException("Invalid refresh token");
         }
-        throw new AuthenticationException("Invalid refresh token");
+
+        String username = jwtService.getUsernameFromToken(oldRefreshToken);
+        MyUser user = findByUsername(username);
+
+        if (!oldRefreshToken.equals(user.getRefreshToken())) {
+            throw new AuthenticationException("Refresh token mismatch");
+        }
+
+        JwtAuthDto jwtAuthDto = jwtService.generateAuthToken(username);
+        user.setRefreshToken(jwtAuthDto.getRefreshToken());
+        repository.save(user);
+
+        return jwtAuthDto;
     }
 
     private MyUser findByCredentials(UserCredentialsDto userCredentialsDto) throws AuthenticationException {
